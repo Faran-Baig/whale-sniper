@@ -191,7 +191,9 @@ if run_button:
                         "Halal": "Yes" if "YES" in shariah else "No"
                     })
                 
-                progress_bar.progress((index + 1) / total_stocks)
+                # progress_bar.progress((index + 1) / total_stocks)
+                # This ensures the value never exceeds 1.0 (100%)
+                progress_bar.progress(min((index + 1) / total_stocks, 1.0))
             
             status_text.empty() # Clear the status text when done
             
