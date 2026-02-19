@@ -134,8 +134,8 @@ with st.sidebar:
     st.divider()
     
     st.header("📂 Data Upload")
-    uploaded_bulk = st.file_uploader("1. Bulk Deals (CSV)", type=['csv'])
-    uploaded_block = st.file_uploader("2. Block Deals (CSV)", type=['csv'])
+    uploaded_bulk = st.file_uploader("1. Bulk Deals (CSV)", type=['dat', 'csv', 'txt'])
+    uploaded_block = st.file_uploader("2. Block Deals (CSV)", type=['dat', 'csv', 'txt'])
     uploaded_dat = st.file_uploader("3. Delivery File (.DAT)", type=['dat', 'csv', 'txt'])
     
     run_button = st.button("🚀 Scan for Whales", use_container_width=True, type="primary")
