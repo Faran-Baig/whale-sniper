@@ -123,6 +123,16 @@ with st.sidebar:
     
     st.divider()
     
+# --- 🔗 NSE DATA SOURCE LINKS ---
+    st.header("📥 Data Sources")
+    st.markdown("""
+    * **Bulk & Block:** [NSE Large Deals](https://www.nseindia.com/market-data/large-deals)
+    * **Delivery (.DAT):** [NSE All Reports](https://www.nseindia.com/all-reports)
+    """)
+    st.caption("Tip: On 'All Reports', search for 'Security-wise Delivery' to find the .DAT file.")
+    
+    st.divider()
+    
     st.header("📂 Data Upload")
     uploaded_bulk = st.file_uploader("1. Bulk Deals (CSV)", type=['csv'])
     uploaded_block = st.file_uploader("2. Block Deals (CSV)", type=['csv'])
