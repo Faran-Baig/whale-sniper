@@ -211,6 +211,8 @@ if run_button:
             df['Net_Qty'] = df.apply(lambda x: x['Quantity'] if str(x['Buy / Sell']).strip().upper() == 'BUY' else -x['Quantity'], axis=1)
             grouped = df.groupby('Symbol').agg({'Net_Qty': 'sum', 'TradePrice': 'mean'}).reset_index()
             candidates = grouped[grouped['Net_Qty'] > 0].copy()
+
+            total_candidates = len(candidates)
             
             dashboard_data = []
             
@@ -223,9 +225,11 @@ if run_button:
             st.info(f"🕵️ Found {len(candidates)} stocks with Net Buying.")
             st.write("Preview of candidates:", candidates.head(3))
             
-            for index, row in candidates.iterrows():
+            # for index, row in candidates.iterrows():
+            for index, row in candidates.reset_index(drop=True).iterrows():
                 symbol = row['Symbol']
-                status_text.text(f"🔍 Analyzing: {symbol} ({index + 1}/{total_stocks})...")
+                # status_text.text(f"🔍 Analyzing: {symbol} ({index + 1}/{total_stocks})...")
+                status_text.text(f"🔍 Analyzing: {row['Symbol']} ({index + 1}/{total_candidates})...")
                 
                 # ⏱️ STEP 1: Add a small delay to avoid "Too Many Requests" block
                 time.sleep(1.5) 
@@ -277,7 +281,8 @@ if run_button:
                     st.sidebar.warning(f"Could not fetch {symbol}")
             
                 # Update progress bar safely
-                progress_bar.progress(min((index + 1) / total_stocks, 1.0))
+                # progress_bar.progress(min((index + 1) / total_stocks, 1.0))
+                progress_bar.progress(min((index + 1) / total_candidates, 1.0))
             
             status_text.empty()
             
