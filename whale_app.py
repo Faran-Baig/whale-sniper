@@ -242,7 +242,7 @@ if run_button:
                     
                     # Calculate Equity % safely
                     shares_out = stats.get('Shares_Outstanding', 0)
-                    st.write(f"DEBUG: {symbol} | Net Qty: {row['Net_Qty']} | Shares Out: {shares_out}")
+                    # st.write(f"DEBUG: {symbol} | Net Qty: {row['Net_Qty']} | Shares Out: {shares_out}")
                     equity_pct = round((row['Net_Qty'] / shares_out) * 100, 2) if shares_out > 0 else 0
                     
                     shariah = check_shariah(stats)
