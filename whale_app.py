@@ -93,46 +93,58 @@ def load_delivery_data(file_obj):
 
 def get_advanced_metrics(symbol):
     try:
+        # 1. Symbol Cleaning
         clean_symbol = str(symbol).strip().split('-')[0].split(' ')[0]
         full_symbol = f"{clean_symbol}.NS"
-        
+
+        # 2. Setup Session
         session = requests.Session()
         session.headers.update({'User-Agent': 'Mozilla/5.0'})
         ticker = yf.Ticker(full_symbol, session=session)
-        
-        # 1. Fetch Price (Most reliable)
+
+        # 3. Fetch Price (CMP)
         hist = ticker.history(period="1d")
-        if hist.empty: return None
+        if hist.empty:
+            st.warning(f"⚠️ No price data for {full_symbol}")
+            return None
+        
         cmp = float(hist['Close'].iloc[-1])
 
-        # 2. Fetch Shares Outstanding (The "Triple-Check" Method)
-        # Location A: The new 2026 fast_info attribute
+        # 4. Fetch Shares Outstanding (Triple-Check)
+        # Try Fast Info first
         shares = ticker.fast_info.get('shares', 0)
-        
-        # Location B: The classic info dictionary
-        if shares <= 1: 
-            info = ticker.info
-            shares = info.get('sharesOutstanding', info.get('floatShares', 0))
-            
-        # Location C: Calculate it manually from Market Cap (if available)
+
+        # Fallback to .info if Fast Info returns 0 or 1
+        if shares <= 1:
+            try:
+                info = ticker.info
+                shares = info.get('sharesOutstanding', info.get('floatShares', 0))
+            except:
+                shares = 0
+
+        # Final Fallback: Market Cap / Price
         if shares <= 1:
             mcap = ticker.fast_info.get('marketCap', 0)
             if mcap > 0:
                 shares = mcap / cmp
 
-        # If it's STILL 0 or 1, we return None so the app skips this stock 
-        # instead of showing wrong data.
+        # If we still can't find shares, we can't calculate Eq %, so we skip
         if shares <= 1:
-            return None 
+            return None
 
+        # 5. Return clean dictionary (No duplicates!)
         return {
             "Shares_Outstanding": shares,
             "CMP": round(cmp, 2),
             "Delivery_Pct": DELIVERY_LOOKUP.get(symbol, 0),
+            "Market_Cap": shares * cmp,
+            "Debt": 0, 
             "Sector": "N/A",
             "Industry": "N/A"
         }
-    except Exception:
+
+    except Exception as e:
+        st.error(f"❌ Error on {symbol}: {str(e)}")
         return None
 
 def check_shariah(details):
