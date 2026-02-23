@@ -70,8 +70,13 @@ def load_delivery_data(file_obj):
             header=None,         
             on_bad_lines='skip'  
         )
-        
-        df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip()
+
+        # Old Cleaner
+        # df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip()
+        # temppf = df[df.iloc[:, 0] == "20"].copy()
+
+        df.iloc[:, 0] = df.iloc[:, 0].astype(str) # Cast first
+        df.iloc[:, 0] = df.iloc[:, 0].str.strip() # Strip second
         temppf = df[df.iloc[:, 0] == "20"].copy()
         
         if temppf.empty:
@@ -157,7 +162,8 @@ with st.sidebar:
     uploaded_block = st.file_uploader("2. Block Deals (CSV)", type=['dat', 'csv', 'txt'])
     uploaded_dat = st.file_uploader("3. Delivery File (.DAT)", type=['dat', 'csv', 'txt'])
     
-    run_button = st.button("🚀 Scan for Whales", use_container_width=True, type="primary")
+    # run_button = st.button("🚀 Scan for Whales", use_container_width=True, type="primary")
+    run_button = st.button("🚀 Scan for Whales", width='stretch', type="primary")
 
 # --- MAIN EXECUTION ---
 if run_button:
@@ -240,9 +246,15 @@ if run_button:
                 st.subheader(f"📊 Market Summary ({len(display_df)} Stocks Analyzed)")
                 
                 # Render interactive table
+                # st.dataframe(
+                #     display_df[["Pass", "Stock", "Net Whale Buy", "Avg Entry", "CMP", "Diff %", "Deal Value (Cr)", "Eq %", "Del %", "Halal"]], 
+                #     use_container_width=True,
+                #     hide_index=True
+                # )
+
                 st.dataframe(
                     display_df[["Pass", "Stock", "Net Whale Buy", "Avg Entry", "CMP", "Diff %", "Deal Value (Cr)", "Eq %", "Del %", "Halal"]], 
-                    use_container_width=True,
+                    width='stretch',  # Changed from use_container_width=True
                     hide_index=True
                 )
                 
