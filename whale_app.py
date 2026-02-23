@@ -99,24 +99,21 @@ def get_advanced_metrics(symbol):
         clean_symbol = str(symbol).strip().split('-')[0].split(' ')[0]
         full_symbol = f"{clean_symbol}.NS"
 
-        # 2. Setup Session
-        session = requests.Session()
-        session.headers.update({'User-Agent': 'Mozilla/5.0'})
-        ticker = yf.Ticker(full_symbol, session=session)
+        # 2. Let yfinance handle the session internally
+        ticker = yf.Ticker(full_symbol)
 
-        # 3. Fetch Price (CMP)
+        # 3. Fetch Price (CMP) using history
         hist = ticker.history(period="1d")
         if hist.empty:
-            st.warning(f"⚠️ No price data for {full_symbol}")
             return None
         
         cmp = float(hist['Close'].iloc[-1])
 
         # 4. Fetch Shares Outstanding (Triple-Check)
-        # Try Fast Info first
+        # Try Fast Info first (Modern way)
         shares = ticker.fast_info.get('shares', 0)
 
-        # Fallback to .info if Fast Info returns 0 or 1
+        # Fallback to .info (Classic way)
         if shares <= 1:
             try:
                 info = ticker.info
@@ -130,11 +127,10 @@ def get_advanced_metrics(symbol):
             if mcap > 0:
                 shares = mcap / cmp
 
-        # If we still can't find shares, we can't calculate Eq %, so we skip
+        # If we still can't find shares, we skip to avoid wrong Eq % math
         if shares <= 1:
             return None
 
-        # 5. Return clean dictionary (No duplicates!)
         return {
             "Shares_Outstanding": shares,
             "CMP": round(cmp, 2),
@@ -145,8 +141,8 @@ def get_advanced_metrics(symbol):
             "Industry": "N/A"
         }
 
-    except Exception as e:
-        st.error(f"❌ Error on {symbol}: {str(e)}")
+    except Exception:
+        # If any major error happens, just skip this stock
         return None
 
 def check_shariah(details):
