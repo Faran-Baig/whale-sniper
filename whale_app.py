@@ -92,38 +92,32 @@ def load_delivery_data(file_obj):
 
 def get_advanced_metrics(symbol):
     try:
-        # 1. Clean the symbol (Remove -EQ, -BE etc. which NSE files often have)
-        # This ensures 'RELIANCE-EQ' becomes 'RELIANCE' before adding '.NS'
-        clean_symbol = str(symbol).split('-')[0].strip()
+        clean_symbol = str(symbol).strip().split('-')[0].split(' ')[0]
+        full_symbol = f"{clean_symbol}.NS"
         
-        delivery_pct = DELIVERY_LOOKUP.get(symbol, 0)
+        # We will use the simplest, most reliable yfinance call just to test
+        ticker = yf.Ticker(full_symbol)
+        hist = ticker.history(period="1d")
         
-        # 2. Use a Session with a User-Agent to prevent Yahoo from blocking the Cloud IP
-        import requests
-        session = requests.Session()
-        session.headers.update({'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'})
+        if hist.empty:
+            # Tell us exactly which stock returned empty data
+            st.warning(f"⚠️ Yahoo returned no data for {full_symbol}")
+            return None
+            
+        cmp = float(hist['Close'].iloc[-1])
         
-        ticker = yf.Ticker(f"{clean_symbol}.NS", session=session)
-        
-        # 3. Use fast_info or get_info (fast_info is more reliable in 2026 for prices)
-        info = ticker.info
-        
-        # If .info fails, try fetching just the price to see if it's alive
-        cmp = info.get("currentPrice") or info.get("regularMarketPrice") or 0
-        
-        if cmp == 0:
-            return None # Skip if we can't even get a price
-
         return {
-            "Shares_Outstanding": info.get("sharesOutstanding", 0),
-            "CMP": cmp,
-            "Delivery_Pct": delivery_pct,
-            "Market_Cap": info.get("marketCap", 0),
-            "Debt": info.get("totalDebt", 0),
-            "Sector": info.get("sector", "Unknown"),
-            "Industry": info.get("industry", "Unknown") 
+            "Shares_Outstanding": 1, # Temporary dummy value for testing
+            "CMP": round(cmp, 2),
+            "Delivery_Pct": DELIVERY_LOOKUP.get(symbol, 0),
+            "Market_Cap": 0,         # Temporary dummy value for testing
+            "Debt": 0,               # Temporary dummy value for testing
+            "Sector": "Testing",
+            "Industry": "Testing"
         }
     except Exception as e:
+        # 🚨 DIAGNOSTIC CHECK 2: PRINT THE ACTUAL ERROR 🚨
+        st.error(f"❌ Python Error on {symbol}: {str(e)}")
         return None
 
 def check_shariah(details):
@@ -199,14 +193,16 @@ if run_button:
             progress_bar = st.progress(0)
             status_text = st.empty()
             total_stocks = len(candidates)
+
+            # 🚨 DIAGNOSTIC CHECK 1 🚨
+            st.info(f"🕵️ Found {len(candidates)} stocks with Net Buying.")
+            st.write("Preview of candidates:", candidates.head(3))
             
             for index, row in candidates.iterrows():
                 symbol = row['Symbol']
                 status_text.text(f"🔍 Analyzing: {symbol} ({index + 1}/{total_stocks})...")
 
-                # 🚨 DIAGNOSTIC CHECK 1 🚨
-                st.info(f"🕵️ Found {len(candidates)} stocks with Net Buying.")
-                st.write("Preview of candidates:", candidates.head(3))
+                
                 
                 stats = get_advanced_metrics(symbol)
                 
