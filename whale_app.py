@@ -96,29 +96,43 @@ def get_advanced_metrics(symbol):
         clean_symbol = str(symbol).strip().split('-')[0].split(' ')[0]
         full_symbol = f"{clean_symbol}.NS"
         
-        # We will use the simplest, most reliable yfinance call just to test
-        ticker = yf.Ticker(full_symbol)
+        session = requests.Session()
+        session.headers.update({'User-Agent': 'Mozilla/5.0'})
+        ticker = yf.Ticker(full_symbol, session=session)
+        
+        # 1. Fetch Price (Most reliable)
         hist = ticker.history(period="1d")
-        
-        if hist.empty:
-            # Tell us exactly which stock returned empty data
-            st.warning(f"⚠️ Yahoo returned no data for {full_symbol}")
-            return None
-            
+        if hist.empty: return None
         cmp = float(hist['Close'].iloc[-1])
+
+        # 2. Fetch Shares Outstanding (The "Triple-Check" Method)
+        # Location A: The new 2026 fast_info attribute
+        shares = ticker.fast_info.get('shares', 0)
         
+        # Location B: The classic info dictionary
+        if shares <= 1: 
+            info = ticker.info
+            shares = info.get('sharesOutstanding', info.get('floatShares', 0))
+            
+        # Location C: Calculate it manually from Market Cap (if available)
+        if shares <= 1:
+            mcap = ticker.fast_info.get('marketCap', 0)
+            if mcap > 0:
+                shares = mcap / cmp
+
+        # If it's STILL 0 or 1, we return None so the app skips this stock 
+        # instead of showing wrong data.
+        if shares <= 1:
+            return None 
+
         return {
-            "Shares_Outstanding": 1, # Temporary dummy value for testing
+            "Shares_Outstanding": shares,
             "CMP": round(cmp, 2),
             "Delivery_Pct": DELIVERY_LOOKUP.get(symbol, 0),
-            "Market_Cap": 0,         # Temporary dummy value for testing
-            "Debt": 0,               # Temporary dummy value for testing
-            "Sector": "Testing",
-            "Industry": "Testing"
+            "Sector": "N/A",
+            "Industry": "N/A"
         }
-    except Exception as e:
-        # 🚨 DIAGNOSTIC CHECK 2: PRINT THE ACTUAL ERROR 🚨
-        st.error(f"❌ Python Error on {symbol}: {str(e)}")
+    except Exception:
         return None
 
 def check_shariah(details):
