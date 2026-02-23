@@ -203,6 +203,10 @@ if run_button:
             for index, row in candidates.iterrows():
                 symbol = row['Symbol']
                 status_text.text(f"🔍 Analyzing: {symbol} ({index + 1}/{total_stocks})...")
+
+                # 🚨 DIAGNOSTIC CHECK 1 🚨
+                st.info(f"🕵️ Found {len(candidates)} stocks with Net Buying.")
+                st.write("Preview of candidates:", candidates.head(3))
                 
                 stats = get_advanced_metrics(symbol)
                 
