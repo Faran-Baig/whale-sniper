@@ -2,7 +2,9 @@ import time
 import streamlit as st
 import pandas as pd
 import yfinance as yf
+import requests
 import re
+import cloudscraper
 
 import os
 from pathlib import Path
