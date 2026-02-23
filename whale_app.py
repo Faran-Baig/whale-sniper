@@ -217,8 +217,8 @@ if run_button:
                     deal_val_cr = round((row['Net_Qty'] * avg_entry) / 10000000, 2)
                     
                     # Calculate Equity % safely
-                    shares = stats.get('Shares_Outstanding', 0)
-                    equity_pct = round((row['Net_Qty'] / shares) * 100, 2) if shares > 0 else 0
+                    shares_out = stats.get('Shares_Outstanding', 0)
+                    equity_pct = round((row['Net_Qty'] / shares_out) * 100, 2) if shares_out > 0 else 0
                     
                     shariah = check_shariah(stats)
                     
