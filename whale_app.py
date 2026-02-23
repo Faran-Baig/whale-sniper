@@ -92,30 +92,38 @@ def load_delivery_data(file_obj):
 
 def get_advanced_metrics(symbol):
     try:
+        # 1. Clean the symbol (Remove -EQ, -BE etc. which NSE files often have)
+        # This ensures 'RELIANCE-EQ' becomes 'RELIANCE' before adding '.NS'
+        clean_symbol = str(symbol).split('-')[0].strip()
+        
         delivery_pct = DELIVERY_LOOKUP.get(symbol, 0)
-        ticker = yf.Ticker(f"{symbol}.NS")
         
-        # NEW: Force yfinance to use a browser-like identity
-        # This helps bypass 'Rate Limit' or 'No Data' errors on Streamlit Cloud
-        info = ticker.get_info(proxy=None) 
+        # 2. Use a Session with a User-Agent to prevent Yahoo from blocking the Cloud IP
+        import requests
+        session = requests.Session()
+        session.headers.update({'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'})
         
-        if not info or 'currentPrice' not in info:
-            # Fallback: if info is empty, try one more time or return placeholder
-            return {
-                "Shares_Outstanding": 0, "CMP": 0, "Delivery_Pct": delivery_pct,
-                "Market_Cap": 0, "Debt": 0, "Sector": "N/A", "Industry": "N/A"
-            }
+        ticker = yf.Ticker(f"{clean_symbol}.NS", session=session)
+        
+        # 3. Use fast_info or get_info (fast_info is more reliable in 2026 for prices)
+        info = ticker.info
+        
+        # If .info fails, try fetching just the price to see if it's alive
+        cmp = info.get("currentPrice") or info.get("regularMarketPrice") or 0
+        
+        if cmp == 0:
+            return None # Skip if we can't even get a price
 
         return {
             "Shares_Outstanding": info.get("sharesOutstanding", 0),
-            "CMP": info.get("currentPrice", 0),
+            "CMP": cmp,
             "Delivery_Pct": delivery_pct,
             "Market_Cap": info.get("marketCap", 0),
             "Debt": info.get("totalDebt", 0),
             "Sector": info.get("sector", "Unknown"),
             "Industry": info.get("industry", "Unknown") 
         }
-    except Exception:
+    except Exception as e:
         return None
 
 def check_shariah(details):
