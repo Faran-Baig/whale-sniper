@@ -57,35 +57,34 @@ def get_daily_deals(bulk_file, block_file):
         return pd.DataFrame()
 
 def load_delivery_data(file_obj):
-    """Reads the uploaded .DAT file directly from Streamlit memory."""
     if not file_obj:
         return {}
     try:
         column_names = [f"Col_{i}" for i in range(7)]
-        # pd.read_csv handles Streamlit's UploadedFile object perfectly
+        
+        # FIX 1: Tell pandas to treat Col_0 and Col_2 as strings immediately
         df = pd.read_csv(
             file_obj, 
             skiprows=4,          
             names=column_names,  
-            header=None,         
+            header=None,
+            dtype={f"Col_{i}": str for i in range(7)}, # Force EVERYTHING to string first
             on_bad_lines='skip'  
         )
-
-        # Old Cleaner
-        # df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip()
-        # temppf = df[df.iloc[:, 0] == "20"].copy()
-
-        df.iloc[:, 0] = df.iloc[:, 0].astype(str) # Cast first
-        df.iloc[:, 0] = df.iloc[:, 0].str.strip() # Strip second
-        temppf = df[df.iloc[:, 0] == "20"].copy()
+        
+        # FIX 2: Now we can safely strip and filter without any dtype warnings
+        df['Col_0'] = df['Col_0'].str.strip()
+        temppf = df[df['Col_0'] == "20"].copy()
         
         if temppf.empty:
             return {}
 
+        # FIX 3: Clean the Symbol column (Col_2) and the Delivery column (Col_6)
         delivery_map = pd.Series(
-            temppf.iloc[:, 6].values, 
-            index=temppf.iloc[:, 2].astype(str).str.strip()
+            temppf['Col_6'].values, 
+            index=temppf['Col_2'].str.strip()
         ).to_dict()
+        
         return delivery_map
     except Exception as e:
         st.error(f"❌ Error parsing DAT file: {e}")
