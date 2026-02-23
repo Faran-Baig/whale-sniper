@@ -3,6 +3,14 @@ import pandas as pd
 import yfinance as yf
 import re
 
+import os
+from pathlib import Path
+
+# Create a local writable cache folder for yfinance
+CACHE_DIR = "./.cache"
+Path(CACHE_DIR).mkdir(exist_ok=True)
+os.environ["YFINANCE_CACHE_DIR"] = CACHE_DIR
+
 # --- ⚙️ PAGE SETUP ---
 st.set_page_config(page_title="Whale Sniper", page_icon="🐋", layout="wide")
 st.title("💰 WHALE TRACKER DASHBOARD")
@@ -82,7 +90,18 @@ def get_advanced_metrics(symbol):
     try:
         delivery_pct = DELIVERY_LOOKUP.get(symbol, 0)
         ticker = yf.Ticker(f"{symbol}.NS")
-        info = ticker.info
+        
+        # NEW: Force yfinance to use a browser-like identity
+        # This helps bypass 'Rate Limit' or 'No Data' errors on Streamlit Cloud
+        info = ticker.get_info(proxy=None) 
+        
+        if not info or 'currentPrice' not in info:
+            # Fallback: if info is empty, try one more time or return placeholder
+            return {
+                "Shares_Outstanding": 0, "CMP": 0, "Delivery_Pct": delivery_pct,
+                "Market_Cap": 0, "Debt": 0, "Sector": "N/A", "Industry": "N/A"
+            }
+
         return {
             "Shares_Outstanding": info.get("sharesOutstanding", 0),
             "CMP": info.get("currentPrice", 0),
