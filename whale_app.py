@@ -1,8 +1,8 @@
+import time
 import streamlit as st
 import pandas as pd
 import yfinance as yf
 import re
-import time
 
 import os
 from pathlib import Path
