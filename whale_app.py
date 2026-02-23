@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import yfinance as yf
 import re
+import time
 
 import os
 from pathlib import Path
@@ -201,25 +202,39 @@ if run_button:
             for index, row in candidates.iterrows():
                 symbol = row['Symbol']
                 status_text.text(f"🔍 Analyzing: {symbol} ({index + 1}/{total_stocks})...")
-
                 
+                # ⏱️ STEP 1: Add a small delay to avoid "Too Many Requests" block
+                time.sleep(1.5) 
                 
                 stats = get_advanced_metrics(symbol)
                 
+                # 🛡️ STEP 2: Only proceed if stats were actually fetched
                 if stats:
                     net_buy_str = f"+{int(row['Net_Qty']):,}"
                     avg_entry = round(row['TradePrice'], 2)
                     cmp = stats['CMP']
                     diff_pct = round(((cmp - avg_entry) / avg_entry) * 100, 1) if avg_entry else 0
                     deal_val_cr = round((row['Net_Qty'] * avg_entry) / 10000000, 2)
-                    equity_pct = round((row['Net_Qty'] / stats['Shares_Outstanding']) * 100, 2) if stats['Shares_Outstanding'] > 0 else 0
+                    
+                    # Calculate Equity % safely
+                    shares = stats.get('Shares_Outstanding', 0)
+                    equity_pct = round((row['Net_Qty'] / shares) * 100, 2) if shares > 0 else 0
+                    
                     shariah = check_shariah(stats)
-                    delivery = stats['Delivery_Pct']
-
-                    passed_rules = "PASS ✅" if (equity_pct >= MIN_EQUITY_PERCENT and 
-                                            delivery >= MIN_DELIVERY_PERCENT and 
-                                            (not STRICT_PRICE_SUPPORT or diff_pct <= 0)) else " "
-
+                    
+                    # Ensure delivery is a float for the comparison below
+                    try:
+                        delivery = float(stats.get('Delivery_Pct', 0))
+                    except:
+                        delivery = 0.0
+            
+                    # ✅ Rule Check: Now delivery >= MIN_DELIVERY_PERCENT won't crash
+                    passed_rules = "PASS ✅" if (
+                        equity_pct >= MIN_EQUITY_PERCENT and 
+                        delivery >= MIN_DELIVERY_PERCENT and 
+                        (not STRICT_PRICE_SUPPORT or diff_pct <= 0)
+                    ) else " "
+            
                     dashboard_data.append({
                         "Pass": passed_rules,
                         "Stock": symbol,
@@ -232,12 +247,14 @@ if run_button:
                         "Del %": delivery,
                         "Halal": "Yes" if "YES" in shariah else "No"
                     })
-                
-                # progress_bar.progress((index + 1) / total_stocks)
-                # This ensures the value never exceeds 1.0 (100%)
+                else:
+                    # ⚠️ Optional: Log which stocks failed so you know why they are missing from the table
+                    st.sidebar.warning(f"Could not fetch {symbol}")
+            
+                # Update progress bar safely
                 progress_bar.progress(min((index + 1) / total_stocks, 1.0))
             
-            status_text.empty() # Clear the status text when done
+            status_text.empty()
             
             # --- DISPLAY RESULTS ---
             final_df = pd.DataFrame(dashboard_data)
